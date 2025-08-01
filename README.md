@@ -1,3 +1,8 @@
+# (that fork) Added entire game state loading/saving
+```sh
+python3 -m crafter.run_gui
+```
+
 **Status:** Stable release
 
 [![PyPI](https://img.shields.io/pypi/v/crafter.svg)](https://pypi.python.org/pypi/crafter/#history)

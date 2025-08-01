@@ -1,7 +1,6 @@
 import collections
 
 import numpy as np
-import pickle
 
 from . import constants
 from . import engine
@@ -129,21 +128,6 @@ class Env(BaseClass):
     (x, y), (w, h) = border, view.shape[:2]
     canvas[x: x + w, y: y + h] = view
     return canvas.transpose((1, 0, 2))
-  
-  def save_state(self, filepath: str) -> None:
-    """Save the full Env instance (world, player, RNG state, etc.) to a file."""
-    with open(filepath, 'wb') as f:
-      # we pickle *self* so that everything (world, player, step count, unlocked set...) is captured
-      pickle.dump(self, f)
-
-  @classmethod
-  def load_state(cls, filepath: str) -> "Env":
-    """Load and return an Env instance from a pickle file."""
-    with open(filepath, 'rb') as f:
-      obj = pickle.load(f)
-    if not isinstance(obj, cls):
-      raise TypeError(f"Expected a {cls.__name__} in {filepath}, got {type(obj)}")
-    return obj
 
   def _obs(self):
     return self.render()

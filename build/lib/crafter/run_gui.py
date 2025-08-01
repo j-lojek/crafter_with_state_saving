@@ -6,8 +6,6 @@ try:
 except ImportError:
   print('Please install the pygame package to use the GUI.')
   raise
-
-import os
 from PIL import Image
 
 import crafter
@@ -37,8 +35,6 @@ def main():
       pygame.K_s: 'move_down',
       pygame.K_SPACE: 'do',
       pygame.K_TAB: 'sleep',
-      pygame.K_j: 'save state to save.pkl',
-      pygame.K_k: 'load state from save.pkl',
 
       pygame.K_r: 'place_stone',
       pygame.K_t: 'place_table',
@@ -92,34 +88,12 @@ def main():
 
     # Keyboard input.
     action = None
-    skip_step = False
     pygame.event.pump()
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
         running = False
       elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
         running = False
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_j:
-        fname = 'save.pkl'
-        try:
-          env.save_state(fname)
-          print(f'[Saved] game state to {fname}')
-        except Exception as e:
-          print(f'[Error] saving game state: {e}')
-        skip_step = True
-        continue
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
-        fname = 'save.pkl'
-        if os.path.exists(fname):
-          try:
-            env = crafter.Env.load_state(fname)
-            print(f'[Loaded] game state {fname}')
-          except Exception as e:
-            print(f'[Error] loading game state: {e}')
-        else:
-          print(f'[Error] no save file at {fname}')
-        skip_step = True
-        continue
       elif event.type == pygame.KEYDOWN and event.key in keymap.keys():
         action = keymap[event.key]
     if action is None:
@@ -134,9 +108,8 @@ def main():
           action = 'noop'
 
     # Environment step.
-    if not skip_step:
-      _, reward, done, _ = env.step(env.action_names.index(action))
-      duration += 1
+    _, reward, done, _ = env.step(env.action_names.index(action))
+    duration += 1
 
     # Achievements.
     unlocked = {
