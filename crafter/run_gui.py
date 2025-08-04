@@ -1,6 +1,9 @@
 import argparse
 
 import numpy as np
+from pathlib import Path
+import joblib, copy
+from datetime import datetime
 try:
   import pygame
 except ImportError:
@@ -39,6 +42,8 @@ def main():
       pygame.K_TAB: 'sleep',
       pygame.K_j: 'save state to save.pkl',
       pygame.K_k: 'load state from save.pkl',
+      pygame.K_i: 'toggle_recording',
+      pygame.K_o: 'playback_state',
 
       pygame.K_r: 'place_stone',
       pygame.K_t: 'place_table',
@@ -77,6 +82,11 @@ def main():
   screen = pygame.display.set_mode(args.window)
   clock = pygame.time.Clock()
   running = True
+  recording = False
+  recorded_states = []
+  checkpoint_dir = Path('checkpoints')
+  checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
   while running:
 
     # Rendering.
@@ -120,6 +130,64 @@ def main():
           print(f'[Error] no save file at {fname}')
         skip_step = True
         continue
+      elif event.type == pygame.KEYDOWN and event.key == pygame.K_i:
+        # toggle recording
+        if not recording:
+          recording = True
+          recorded_states = []
+          print('[Recording] Started recording states.')
+        else:
+          recording = False
+          if recorded_states:
+            ts = datetime.now().strftime('%Y%m%dT%H%M%S')
+            path = checkpoint_dir / f'{ts}_states.joblib'
+            joblib.dump(recorded_states, path, compress=('lzma', 9))
+            print(f'[Recording] Stopped. Saved {len(recorded_states)} states to {path}')
+          else:
+            print('[Recording] Stopped. No states recorded.')
+        skip_step = True
+        continue
+      elif event.type == pygame.KEYDOWN and event.key == pygame.K_o:
+        # playback
+        try:
+          idx = int(input('Enter timestep index to load: '))
+        except Exception:
+          print('[Playback] Invalid timestep, cancelling.')
+          skip_step = True
+          continue
+        fname = input('Enter filename to load (Enter = latest): ').strip()
+        if fname:
+          path = checkpoint_dir / fname
+        else:
+          files = list(checkpoint_dir.glob('*.joblib'))
+          if not files:
+            print('[Playback] No checkpoint files.')
+            skip_step = True
+            continue
+          path = max(files, key=lambda f: f.stat().st_mtime)
+        if not path.exists():
+          print(f'[Playback] File {path} not found.')
+          skip_step = True
+          continue
+        try:
+          states = joblib.load(path)
+        except Exception as e:
+          print(f'[Playback] Load error: {e}')
+          skip_step = True
+          continue
+        if idx < 0 or idx >= len(states):
+          print(f'[Playback] Index {idx} out of range 0–{len(states)-1}.')
+          skip_step = True
+          continue
+        env = states[idx]
+        duration = env._step
+        return_ = 0
+        achievements = {n for n,c in env._player.achievements.items() if c>0}
+        was_done = False
+        recorded_states = []
+        print(f'[Playback] Loaded state {idx} from {path}.')
+        skip_step = True
+        continue
       elif event.type == pygame.KEYDOWN and event.key in keymap.keys():
         action = keymap[event.key]
     if action is None:
@@ -137,6 +205,10 @@ def main():
     if not skip_step:
       _, reward, done, _ = env.step(env.action_names.index(action))
       duration += 1
+      if recording:
+        recorded_states.append(copy.deepcopy(env))
+        if len(recorded_states) % 10 == 0:
+            print(f'[Recording] Captured {len(recorded_states)} states.')
 
     # Achievements.
     unlocked = {

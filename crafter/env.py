@@ -1,7 +1,7 @@
 import collections
 
 import numpy as np
-import pickle
+import joblib
 
 from . import constants
 from . import engine
@@ -133,16 +133,18 @@ class Env(BaseClass):
   def save_state(self, filepath: str) -> None:
     """Save the full Env instance (world, player, RNG state, etc.) to a file."""
     with open(filepath, 'wb') as f:
-      # we pickle *self* so that everything (world, player, step count, unlocked set...) is captured
-      pickle.dump(self, f)
+      # we dump *self* so that everything (world, player, step count, unlocked set...) is captured
+      joblib.dump(self, filepath, compress=('lzma', 9))
 
   @classmethod
   def load_state(cls, filepath: str) -> "Env":
-    """Load and return an Env instance from a pickle file."""
-    with open(filepath, 'rb') as f:
-      obj = pickle.load(f)
+    """Load and return an Env instance from a joblib file."""
+    try:
+      obj = joblib.load(filepath)
+    except Exception as e:
+      print('Exception while loading state {e}')
     if not isinstance(obj, cls):
-      raise TypeError(f"Expected a {cls.__name__} in {filepath}, got {type(obj)}")
+        raise TypeError(f'Expected a {cls.__name__}, got {type(obj)}')
     return obj
 
   def _obs(self):

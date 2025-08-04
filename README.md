@@ -1,6 +1,10 @@
-# (that fork) Added entire game state loading/saving
+# (that fork) Added entire game state loading/saving, state compression, playback from any state
 ```sh
 python3 -m crafter.run_gui
+```
+
+```sh
+python3 -m crafter.vid_exporter
 ```
 
 **Status:** Stable release
